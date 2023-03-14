@@ -21,56 +21,56 @@ parser.add_argument('--model', type=str, required=True, default='Autoformer',
 
 # data loader
 parser.add_argument('--data', type=str, required=True, default='ETTm1', help='dataset type')
-parser.add_argument('--root_path', type=str, default='./data/ETT/', help='root path of the data file')
-parser.add_argument('--data_path', type=str, default='ETTh1.csv', help='data file')
-parser.add_argument('--features', type=str, default='M',
+parser.add_argument('--root_path', type=str, default='./data/ETT/', help='root path of the data file') # 数据集路径
+parser.add_argument('--data_path', type=str, default='ETTh1.csv', help='data file') # 数据集文件名
+parser.add_argument('--features', type=str, default='M', # 输入特征
                     help='forecasting task, options:[M, S, MS]; M:multivariate predict multivariate, S:univariate predict univariate, MS:multivariate predict univariate')
-parser.add_argument('--target', type=str, default='OT', help='target feature in S or MS task')
-parser.add_argument('--freq', type=str, default='h',
-                    help='freq for time features encoding, options:[s:secondly, t:minutely, h:hourly, d:daily, b:business days, w:weekly, m:monthly], you can also use more detailed freq like 15min or 3h')
-parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='location of model checkpoints')
+parser.add_argument('--target', type=str, default='OT', help='target feature in S or MS task') # 目标特征
+parser.add_argument('--freq', type=str, default='h', # 采样频率 
+                    help='freq for time features encoding, options:[s:secondly, t:minutely, h:hourly, d:daily, b:business days, w:weekly, m:monthly], you can also use more detailed freq like 15min or 3h') 
+parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='location of model checkpoints') # 模型保存路径
 
 # forecasting task
-parser.add_argument('--seq_len', type=int, default=96, help='input sequence length')
-parser.add_argument('--label_len', type=int, default=48, help='start token length')
-parser.add_argument('--pred_len', type=int, default=96, help='prediction sequence length')
+parser.add_argument('--seq_len', type=int, default=96, help='input sequence length') # 输入序列长度
+parser.add_argument('--label_len', type=int, default=48, help='start token length') # 标签序列长度
+parser.add_argument('--pred_len', type=int, default=96, help='prediction sequence length') # 预测序列长度
 
 
 # DLinear
 parser.add_argument('--individual', action='store_true', default=False, help='DLinear: a linear layer for each variate(channel) individually')
 # Formers 
-parser.add_argument('--embed_type', type=int, default=0, help='0: default 1: value embedding + temporal embedding + positional embedding 2: value embedding + temporal embedding 3: value embedding + positional embedding 4: value embedding')
+parser.add_argument('--embed_type', type=int, default=0, help='0: default 1: value embedding + temporal embedding + positional embedding 2: value embedding + temporal embedding 3: value embedding + positional embedding 4: value embedding') 
 parser.add_argument('--enc_in', type=int, default=7, help='encoder input size') # DLinear with --individual, use this hyperparameter as the number of channels
-parser.add_argument('--dec_in', type=int, default=7, help='decoder input size')
-parser.add_argument('--c_out', type=int, default=7, help='output size')
-parser.add_argument('--d_model', type=int, default=512, help='dimension of model')
-parser.add_argument('--n_heads', type=int, default=8, help='num of heads')
+parser.add_argument('--dec_in', type=int, default=7, help='decoder input size') 
+parser.add_argument('--c_out', type=int, default=7, help='output size') # 输出特征数
+parser.add_argument('--d_model', type=int, default=512, help='dimension of model')# 模型维度
+parser.add_argument('--n_heads', type=int, default=8, help='num of heads') # 多头注意力机制的头数
 parser.add_argument('--e_layers', type=int, default=2, help='num of encoder layers')
 parser.add_argument('--d_layers', type=int, default=1, help='num of decoder layers')
 parser.add_argument('--d_ff', type=int, default=2048, help='dimension of fcn')
-parser.add_argument('--moving_avg', type=int, default=25, help='window size of moving average')
-parser.add_argument('--factor', type=int, default=1, help='attn factor')
-parser.add_argument('--distil', action='store_false',
+parser.add_argument('--moving_avg', type=int, default=25, help='window size of moving average') # 移动平均窗口大小
+parser.add_argument('--factor', type=int, default=1, help='attn factor') # 用于计算attention的因子
+parser.add_argument('--distil', action='store_false', 
                     help='whether to use distilling in encoder, using this argument means not using distilling',
-                    default=True)
-parser.add_argument('--dropout', type=float, default=0.05, help='dropout')
-parser.add_argument('--embed', type=str, default='timeF',
-                    help='time features encoding, options:[timeF, fixed, learned]')
-parser.add_argument('--activation', type=str, default='gelu', help='activation')
-parser.add_argument('--output_attention', action='store_true', help='whether to output attention in ecoder')
-parser.add_argument('--do_predict', action='store_true', help='whether to predict unseen future data')
+                    default=True) # 是否使用蒸馏 例如 input96 output48 96/48=2
+parser.add_argument('--dropout', type=float, default=0.05, help='dropout') # dropout作用：防止过拟合，随机让一些神经元失活，防止神经元之间的过度依赖
+parser.add_argument('--embed', type=str, default='timeF', # 时间特征编码方式
+                    help='time features encoding, options:[timeF, fixed, learned]') # timeF:时间特征，fixed:固定编码，learned:学习编码
+parser.add_argument('--activation', type=str, default='gelu', help='activation') # 激活函数
+parser.add_argument('--output_attention', action='store_true', help='whether to output attention in ecoder') # 是否输出注意力机制
+parser.add_argument('--do_predict', action='store_true', help='whether to predict unseen future data') # 是否预测未来数据
 
 # optimization
-parser.add_argument('--num_workers', type=int, default=10, help='data loader num workers')
-parser.add_argument('--itr', type=int, default=2, help='experiments times')
-parser.add_argument('--train_epochs', type=int, default=10, help='train epochs')
-parser.add_argument('--batch_size', type=int, default=32, help='batch size of train input data')
-parser.add_argument('--patience', type=int, default=3, help='early stopping patience')
-parser.add_argument('--learning_rate', type=float, default=0.0001, help='optimizer learning rate')
-parser.add_argument('--des', type=str, default='test', help='exp description')
-parser.add_argument('--loss', type=str, default='mse', help='loss function')
-parser.add_argument('--lradj', type=str, default='type1', help='adjust learning rate')
-parser.add_argument('--use_amp', action='store_true', help='use automatic mixed precision training', default=False)
+parser.add_argument('--num_workers', type=int, default=10, help='data loader num workers') # 数据加载线程数
+parser.add_argument('--itr', type=int, default=2, help='experiments times') # 实验次数
+parser.add_argument('--train_epochs', type=int, default=10, help='train epochs') # 训练轮数
+parser.add_argument('--batch_size', type=int, default=32, help='batch size of train input data') # 训练batch大小
+parser.add_argument('--patience', type=int, default=3, help='early stopping patience') # 提前停止的轮数
+parser.add_argument('--learning_rate', type=float, default=0.0001, help='optimizer learning rate') # 学习率
+parser.add_argument('--des', type=str, default='test', help='exp description') # 实验描述
+parser.add_argument('--loss', type=str, default='mse', help='loss function') # 损失函数
+parser.add_argument('--lradj', type=str, default='type1', help='adjust learning rate') # 学习率调整方式
+parser.add_argument('--use_amp', action='store_true', help='use automatic mixed precision training', default=False) # 混合精度训练
 
 # GPU
 parser.add_argument('--use_gpu', type=bool, default=True, help='use gpu')
@@ -97,6 +97,7 @@ Exp = Exp_Main
 if args.is_training:
     for ii in range(args.itr):
         # setting record of experiments
+        # setting用于记录实验的参数
         setting = '{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_fc{}_eb{}_dt{}_{}_{}'.format(
             args.model_id,
             args.model,

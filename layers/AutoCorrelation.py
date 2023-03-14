@@ -14,12 +14,19 @@ class AutoCorrelation(nn.Module):
     (1) period-based dependencies discovery
     (2) time delay aggregation
     This block can replace the self-attention family mechanism seamlessly.
+    Args:
+    mask_flag: whether to mask the future information
+    factor: the factor to control the number of top-k time delays
+    factor是一个超参数 用来控制top-k的数量 top-k用于计算权重
+    scale: the scale factor to control the attention weights
+    attention_dropout: the dropout rate for the attention weights
+    output_attention: whether to output the attention weights
     """
     def __init__(self, mask_flag=True, factor=1, scale=None, attention_dropout=0.1, output_attention=False):
         super(AutoCorrelation, self).__init__()
         self.factor = factor
-        self.scale = scale
-        self.mask_flag = mask_flag
+        self.scale = scale 
+        self.mask_flag = mask_flag # mask
         self.output_attention = output_attention
         self.dropout = nn.Dropout(attention_dropout)
 

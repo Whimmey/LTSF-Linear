@@ -82,7 +82,7 @@ class Exp_Main(Exp_Basic):
                             outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
                         else:
                             outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
-                f_dim = -1 if self.args.features == 'MS' else 0
+                f_dim = -1 if self.args.features == 'MS' else 0 # 单变量的话，f_dim=0，多变量的话，f_dim=-1
                 outputs = outputs[:, -self.args.pred_len:, f_dim:]
                 batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)
 
@@ -143,14 +143,20 @@ class Exp_Main(Exp_Basic):
                             outputs = self.model(batch_x)
                         else:
                             if self.args.output_attention:
+                                """
+                                batch_x: encoder的输入数据，即batch_x的前面的label_len个数
+                                batch_x_mark: mask意思是batch_x的前面的label_len个数是有用的，后面的pred_len个数是没有用的，所以mask的前面的label_len个数是1，后面的pred_len个数是0
+                                dec_inp: decoder的输入数据，即batch_y的前面的label_len个数
+                                batch_y_mark: mask
+                                """
                                 outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
                             else:
                                 outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
 
-                        f_dim = -1 if self.args.features == 'MS' else 0
+                        f_dim = -1 if self.args.features == 'MS' else 0 # 单变量的话，f_dim=0，多变量的话，f_dim=-1
                         outputs = outputs[:, -self.args.pred_len:, f_dim:]
                         batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)
-                        loss = criterion(outputs, batch_y)
+                        loss = criterion(outputs, batch_y) # 计算loss
                         train_loss.append(loss.item())
                 else:
                     if 'Linear' in self.args.model:
@@ -181,8 +187,8 @@ class Exp_Main(Exp_Basic):
                     scaler.step(model_optim)
                     scaler.update()
                 else:
-                    loss.backward()
-                    model_optim.step()
+                    loss.backward() # 反向传播，backward()函数会自动计算所有的梯度
+                    model_optim.step() # 更新参数，step()函数能够根据梯度更新参数
 
             print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
             train_loss = np.average(train_loss)
@@ -324,9 +330,9 @@ class Exp_Main(Exp_Basic):
                 batch_y_mark = batch_y_mark.float().to(self.device)
 
                 # decoder input
-                dec_inp = torch.zeros([batch_y.shape[0], self.args.pred_len, batch_y.shape[2]]).float().to(batch_y.device)
-                dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
-                # encoder - decoder
+                dec_inp = torch.zeros([batch_y.shape[0], self.args.pred_len, batch_y.shape[2]]).float().to(batch_y.device) # 将batch_y的后面的pred_len个0填充到batch_y的后面
+                dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device) # 将batch_y的前面的label_len个数填充到batch_y的前面
+                # encoder - decoder 
                 if self.args.use_amp:
                     with torch.cuda.amp.autocast():
                         if 'Linear' in self.args.model:
@@ -338,17 +344,17 @@ class Exp_Main(Exp_Basic):
                                 outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
                 else:
                     if 'Linear' in self.args.model:
-                        outputs = self.model(batch_x)
+                        outputs = self.model(batch_x) # outputs为预测的结果
                     else:
                         if self.args.output_attention:
                             outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
                         else:
                             outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
-                pred = outputs.detach().cpu().numpy()  # .squeeze()
+                pred = outputs.detach().cpu().numpy()  # .squeeze() #将outpus的维度从[batch_size, pred_len, 1]变成[batch_size, pred_len]
                 preds.append(pred)
 
         preds = np.array(preds)
-        preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
+        preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1]) 
         if (pred_data.scale):
             preds = pred_data.inverse_transform(preds)
         

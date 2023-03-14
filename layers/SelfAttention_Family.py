@@ -11,7 +11,7 @@ from utils.masking import TriangularCausalMask, ProbMask
 import os
 
 
-class FullAttention(nn.Module):
+class FullAttention(nn.Module): # 全连接注意力机制，和概率注意力机制的区别在于，全连接注意力机制是对所有的query和key进行计算，而概率注意力机制是对部分query和key进行计算
     def __init__(self, mask_flag=True, factor=5, scale=None, attention_dropout=0.1, output_attention=False):
         super(FullAttention, self).__init__()
         self.scale = scale
@@ -41,7 +41,7 @@ class FullAttention(nn.Module):
             return (V.contiguous(), None)
 
 
-class ProbAttention(nn.Module):
+class ProbAttention(nn.Module): # 概率注意力机制，与全连接注意力机制的区别在于，全连接注意力机制是对所有的query和key进行计算，而概率注意力机制是对部分query和key进行计算
     def __init__(self, mask_flag=True, factor=5, scale=None, attention_dropout=0.1, output_attention=False):
         super(ProbAttention, self).__init__()
         self.factor = factor
@@ -56,14 +56,14 @@ class ProbAttention(nn.Module):
         _, _, L_Q, _ = Q.shape
 
         # calculate the sampled Q_K
-        K_expand = K.unsqueeze(-3).expand(B, H, L_Q, L_K, E)
-        index_sample = torch.randint(L_K, (L_Q, sample_k))  # real U = U_part(factor*ln(L_k))*L_q
-        K_sample = K_expand[:, :, torch.arange(L_Q).unsqueeze(1), index_sample, :]
-        Q_K_sample = torch.matmul(Q.unsqueeze(-2), K_sample.transpose(-2, -1)).squeeze()
+        K_expand = K.unsqueeze(-3).expand(B, H, L_Q, L_K, E)  # 扩充维度，在第三维度上扩充L_q次，第四维度上扩充L_k次
+        index_sample = torch.randint(L_K, (L_Q, sample_k))  # real U = U_part(factor*ln(L_k))*L_q，在L_k中随机采样，在key中采样，
+        K_sample = K_expand[:, :, torch.arange(L_Q).unsqueeze(1), index_sample, :] #
+        Q_K_sample = torch.matmul(Q.unsqueeze(-2), K_sample.transpose(-2, -1)).squeeze() #采样后的Q_K
 
         # find the Top_k query with sparisty measurement
-        M = Q_K_sample.max(-1)[0] - torch.div(Q_K_sample.sum(-1), L_K)
-        M_top = M.topk(n_top, sorted=False)[1]
+        M = Q_K_sample.max(-1)[0] - torch.div(Q_K_sample.sum(-1), L_K) # M是每个query的最大值减去平均值
+        M_top = M.topk(n_top, sorted=False)[1] # 选出最大的n_top个query
 
         # use the reduced Q to calculate Q_K
         Q_reduce = Q[torch.arange(B)[:, None, None],
@@ -71,7 +71,7 @@ class ProbAttention(nn.Module):
                    M_top, :]  # factor*ln(L_q)
         Q_K = torch.matmul(Q_reduce, K.transpose(-2, -1))  # factor*ln(L_q)*L_k
 
-        return Q_K, M_top
+        return Q_K, M_top # Q_K是采样后的Q_K，M_top是最大的n_top个query的index
 
     def _get_initial_context(self, V, L_Q):
         B, H, L_V, D = V.shape
@@ -120,18 +120,18 @@ class ProbAttention(nn.Module):
         scores_top, index = self._prob_QK(queries, keys, sample_k=U_part, n_top=u)
 
         # add scale factor
-        scale = self.scale or 1. / sqrt(D)
+        scale = self.scale or 1. / sqrt(D) # 排除维度的影响，因为维度越大，内积越大，所以需要除以维度
         if scale is not None:
             scores_top = scores_top * scale
         # get the context
-        context = self._get_initial_context(values, L_Q)
+        context = self._get_initial_context(values, L_Q) # __get_initial_context函数用于初始化context，如果mask_flag为False，就是将values的平均值作为context，如果为True，就是将values的累加值作为context
         # update the context with selected top_k queries
-        context, attn = self._update_context(context, values, scores_top, index, L_Q, attn_mask)
+        context, attn = self._update_context(context, values, scores_top, index, L_Q, attn_mask) # _update_context函数用于更新context，如果mask_flag为False，就是将values的平均值作为context，如果为True，就是将values的累加值作为context
 
         return context.contiguous(), attn
 
 
-class AttentionLayer(nn.Module):
+class AttentionLayer(nn.Module): # multi-head attention，与全连接层类似，只是在前向传播中，将输入分成多个头，每个头进行前向传播，最后将结果拼接起来，
     def __init__(self, attention, d_model, n_heads, d_keys=None,
                  d_values=None):
         super(AttentionLayer, self).__init__()
@@ -151,6 +151,8 @@ class AttentionLayer(nn.Module):
         _, S, _ = keys.shape
         H = self.n_heads
 
+        # 下面的代码将输入分成多个头，每个头进行前向传播，最后将结果拼接起来
+        # view函数的作用是将输入的tensor变成指定的形状，-1表示自适应
         queries = self.query_projection(queries).view(B, L, H, -1)
         keys = self.key_projection(keys).view(B, S, H, -1)
         values = self.value_projection(values).view(B, S, H, -1)
